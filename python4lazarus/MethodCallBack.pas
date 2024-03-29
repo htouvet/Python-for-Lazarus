@@ -147,7 +147,11 @@ const
   PROT_WRITE  =2;
   PROT_EXEC   =4;
   MAP_PRIVATE =2;
-  MAP_ANON=$1000;  
+  {$IF defined(LINUX) or defined(ANDROID)}
+  MAP_ANON=$20;
+  {$else}
+  MAP_ANON=$1000; // darwin
+  {$endif}
 {$ENDIF}
 {$ENDIF}
 
@@ -169,10 +173,9 @@ begin
   if (page = nil) or (PtrCalcType(CodeMemPages^.CodeBlocks) - PtrCalcType(Pointer(CodeMemPages)) <= (size + 3*sizeof(PCodeMemBlock))) then
   begin
     // allocate new Page
-	{$IFDEF MSWINDOWS}	
+	{$IFDEF MSWINDOWS}
     page:=VirtualAlloc(nil, PageSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	{$ELSE}
-    //page := GetMem(PageSize);
     {$WARN SYMBOL_PLATFORM OFF}
     page := mmap(Pointer($10000000), PageSize, PROT_NONE, MAP_PRIVATE or MAP_ANON, -1, 0);
     {$WARN SYMBOL_PLATFORM ON}
@@ -262,7 +265,6 @@ begin
 	  	  {$IFDEF MSWINDOWS}
           VirtualFree(page, 0, MEM_RELEASE);
 		  {$ELSE}
-          // FreeMem(page);
           munmap(page,PageSize);
 		  {$ENDIF}
         end;
@@ -311,7 +313,6 @@ begin
   {$IFDEF MSWINDOWS}
     VirtualFree(page, 0, MEM_RELEASE);
   {$ELSE}
-	//FreeMem(page);
     munmap(page,PageSize);
   {$ENDIF}
 
@@ -764,3 +765,4 @@ finalization
   FreeCallBacks;
 
 end.
+
